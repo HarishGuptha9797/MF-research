@@ -25,11 +25,17 @@ export const FundSearch: React.FC<FundSearchProps> = ({ onFundSelected }) => {
     fetch('/api/funds/all')
       .then(res => res.json())
       .then(data => {
-        setFunds(data);
+        if (Array.isArray(data)) {
+          setFunds(data);
+        } else {
+          console.error('API returned non-array data:', data);
+          setFunds([]);
+        }
         setIsLoadingFunds(false);
       })
       .catch(err => {
         console.error('Failed to load funds master list', err);
+        setFunds([]);
         setIsLoadingFunds(false);
       });
   }, []);

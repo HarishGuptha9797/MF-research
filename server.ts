@@ -4,23 +4,39 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 import { Pool } from "pg";
+import dotenv from "dotenv";
+import fs from "fs";
+
+// Load environment variables from .env or fallback to .env.example
+if (fs.existsSync(".env")) {
+  dotenv.config({ path: ".env" });
+} else if (fs.existsSync(".env.example")) {
+  dotenv.config({ path: ".env.example" });
+} else {
+  dotenv.config();
+}
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Strip quotes from env variables that might be accidentally wrapped
+const cleanEnv = (val?: string) => val ? val.replace(/^["']|["']$/g, '').trim() : '';
+
+const dbUrl = cleanEnv(process.env.DATABASE_URL) ;
+const supabaseUrl = cleanEnv(process.env.SUPABASE_URL);
+const supabaseKey = cleanEnv(process.env.SUPABASE_ANON_KEY) || "";
+
 // Initialize PostgreSQL connection pool as fallback
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://readonly_user.ueboiylghraxynqoqzjg:Hello%40%40123@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres",
-  ssl: {
-    rejectUnauthorized: false
-  }
+  connectionString: dbUrl,
+  ssl: dbUrl ? { rejectUnauthorized: false } : undefined
 });
 
 // Initialize Supabase REST Client
-const supabaseUrl = process.env.SUPABASE_URL || "https://ueboiylghraxynqoqzjg.supabase.co";
-const supabaseKey = process.env.SUPABASE_ANON_KEY || "";
-const supabase = supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+const supabase = (supabaseUrl && supabaseKey && supabaseUrl.startsWith("http")) 
+  ? createClient(supabaseUrl, supabaseKey) 
+  : null;
 
 async function startServer() {
   const app = express();
