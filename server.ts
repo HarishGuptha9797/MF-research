@@ -23,11 +23,15 @@ const __dirname = path.dirname(__filename);
 // Strip quotes from env variables that might be accidentally wrapped
 const cleanEnv = (val?: string) => val ? val.replace(/^["']|["']$/g, '').trim() : '';
 
-const dbUrl = cleanEnv(process.env.DATABASE_URL) ;
+const dbUrl = cleanEnv(process.env.DATABASE_URL);
 const supabaseUrl = cleanEnv(process.env.SUPABASE_URL);
-const supabaseKey = cleanEnv(process.env.SUPABASE_ANON_KEY) || "";
+const supabaseKey = cleanEnv(process.env.SUPABASE_ANON_KEY);
 
-// Initialize PostgreSQL connection pool as fallback
+if (!dbUrl) {
+  console.warn("WARNING: DATABASE_URL is not set. Database connections will fail.");
+}
+
+// Initialize PostgreSQL connection pool
 const pool = new Pool({
   connectionString: dbUrl,
   ssl: dbUrl ? { rejectUnauthorized: false } : undefined
@@ -37,6 +41,10 @@ const pool = new Pool({
 const supabase = (supabaseUrl && supabaseKey && supabaseUrl.startsWith("http")) 
   ? createClient(supabaseUrl, supabaseKey) 
   : null;
+
+if (!supabase) {
+  console.warn("WARNING: Supabase URL or Key is missing. Falling back to direct database connection.");
+}
 
 async function startServer() {
   const app = express();
