@@ -23,7 +23,15 @@ export const FundSearch: React.FC<FundSearchProps> = ({ onFundSelected }) => {
   useEffect(() => {
     // Fetch master list of funds exactly once on load to populate selector
     fetch('/api/funds/all')
-      .then(res => res.json())
+      .then(async res => {
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          return res.json();
+        } else {
+          const text = await res.text();
+          throw new Error('Expected JSON, got ' + contentType + ': ' + text.substring(0, 30));
+        }
+      })
       .then(data => {
         if (Array.isArray(data)) {
           setFunds(data);
@@ -54,10 +62,13 @@ export const FundSearch: React.FC<FundSearchProps> = ({ onFundSelected }) => {
     
     try {
       const res = await fetch(`/api/funds/${fundMeta.scheme_code}/full`);
-      if (res.ok) {
+      const contentType = res.headers.get("content-type");
+      if (res.ok && contentType && contentType.indexOf("application/json") !== -1) {
         const data = await res.json();
         onFundSelected(data);
       } else {
+        const text = await res.text();
+        console.error("API returned error or HTML. Content type:", contentType, text.substring(0,50));
         alert("Failed to load NAV data for this fund.");
       }
     } catch(err) {
